@@ -1,0 +1,6 @@
+interface:
+  display_name: "前端点击测试"
+  short_description: "根据刚完成的功能生成测试点并执行可视化点击验证"
+  default_prompt: "使用 $frontend-click-test 测试刚完成的前端功能并打印报告。"
+policy:
+  allow_implicit_invocation: true
