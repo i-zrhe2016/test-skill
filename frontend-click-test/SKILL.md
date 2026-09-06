@@ -1,11 +1,27 @@
 ---
 name: frontend-click-test
-description: 在一个前端功能点实现完成后，根据当前对话、验收要求和本次改动自动提炼最小测试清单，使用可用的浏览器工具进行可视化点击验证，并打印简洁的 Markdown 测试报告。适用于页面、组件和用户交互改动；不用于纯后端、纯文档、性能或安全测试。
+description: 在一个前端功能点实现完成后，根据当前对话、验收要求和本次改动自动提炼最小测试清单，使用 Playwright CLI 驱动真实 Chromium 进行可视化点击验证，并打印简洁的 Markdown 测试报告。适用于页面、组件和用户交互改动；不用于纯后端、纯文档、性能或安全测试。
 ---
 
 # 前端点击测试
 
 在前端功能点实现和常规代码验证完成后使用本 Skill。目标是快速确认用户能否通过真实页面完成刚实现的功能，而不是扩展成完整回归测试。
+
+## 与开发节奏配合
+
+采用“一个功能、一次闭环”的节奏：先从需求写出该功能的可观察验收点，完成实现后立即执行本 Skill 的定向点击测试；定向测试通过后再进入下一个功能。所有功能完成后，再执行项目已有的整体测试和必要的整体浏览器冒烟测试。本 Skill 的浏览器验证不能替代单元测试、组件测试或接口测试。
+
+## 真实浏览器前置
+
+默认使用 Playwright CLI 管理的真实 Chromium，不得用 `curl`、静态 HTML 或仅阅读代码代替浏览器通过。Playwright 官方将 `playwright-cli` 作为适合 Coding Agent 的控制方式；浏览器安装和命令参考 [CLI 文档](https://playwright.dev/docs/getting-started-cli) 与 [浏览器文档](https://playwright.dev/docs/browsers)。
+
+开始测试前检查：
+
+1. `command -v playwright-cli` 存在。
+2. `playwright-cli install-browser --list` 中存在 Chromium。浏览器或系统依赖缺失时，若当前任务已授权安装环境依赖，可执行 `npm install -g @playwright/cli@latest` 和 `playwright-cli install-browser chromium --with-deps`；否则将测试标记为 `阻塞`，不伪造通过结果。
+3. 始终显式指定 bundled Chromium：`playwright-cli open --browser=chromium <页面地址>`。不要省略 `--browser=chromium`，因为默认配置可能尝试启动未安装的品牌 Chrome；需要人眼观察时再加 `--headed`。
+
+默认会话不持久化登录状态。只有在安全测试环境和专用测试账号下，才使用 `--persistent` 或 `state-save`；保存的 cookies、localStorage 和认证状态不得提交或打印。
 
 ## 确定测试范围
 
@@ -23,17 +39,36 @@ description: 在一个前端功能点实现完成后，根据当前对话、验�
 
 不要把未实现、未要求的能力写成测试点，也不要默认扩大到全站回归、兼容性、性能、安全或无障碍审计。
 
+## 稳定性原则
+
+这些规则来自前端自动化实践中反复出现的失败模式：
+
+- 定位器优先使用用户可感知的 role、label 和 accessible name；对关键且文案可能变化的控件，使用团队约定并稳定维护的 `data-testid` 或 `aria-*`。避免 CSS 层级、XPath、`nth-child` 和过深的 locator 链。
+- 不要把易变的文案作为唯一定位依据，除非文案本身就是本次验收目标；文案断言和控件定位可以分开。
+- 等待目标状态而不是等待时间：优先使用浏览器工具的自动等待和 web-first assertion，例如可见、可用、文本变化、loading 消失或目标请求完成。不要默认使用 `sleep`、`waitForTimeout` 或 `networkidle`；慢速模式只能用于复现问题，不能替代修复。
+- 测试点应短小、相互独立，从已知 URL、会话和数据状态开始。非本次 UI 行为的前置数据优先用 fixture、接口或安全种子准备；本次要验证的行为必须通过真实页面操作完成。
+- 失败时保留能复现问题的证据：截图、当前 URL、可见页面状态，以及工具支持时的 trace、控制台和网络错误。重试只能作为一次诊断手段，不能把重试通过直接记为稳定通过；将失败归类为定位器、应用未就绪、网络/后端、数据/环境或真实断言失败。
+
 ## 执行可视化测试
 
 1. 找到项目已有的启动和测试方式，优先复用正在运行的开发服务。
-2. 使用当前环境可用的浏览器自动化或页面交互工具打开页面。
-3. 按用户真实操作顺序执行点击、输入、选择、提交和返回等动作。
-4. 每个测试点都观察并记录可见结果；需要时截图作为证据。
-5. 同时留意阻断当前流程的控制台错误或页面错误，但不要借此扩展测试范围。
+2. 启动真实浏览器：`playwright-cli open --browser=chromium <页面地址>`。测试多个项目或并行会话时使用命名会话，并在后续每条命令中保持相同的 `-s=<会话名>`。
+3. 先运行 `playwright-cli snapshot` 获取当前页面的元素引用，再按用户真实操作顺序执行 `click`、`fill`、`type`、`select`、`check`、`press`、`goto` 或 `go-back`。
+4. 页面导航、弹窗、提交或异步状态变化后重新运行 `snapshot`；不要复用已经失效或属于旧页面状态的元素引用。主路径必须由真实浏览器动作完成，`eval` 只用于诊断，不用于替代点击和输入。
+5. 每个测试点都观察并记录可见结果；成功或失败时按需要使用 `playwright-cli screenshot` 保存证据。失败时补充 `console`、`requests`，复杂流程再使用 `tracing-start` / `tracing-stop`。
+6. 测试结束执行 `playwright-cli close`（命名会话使用同一会话名），并同时留意阻断当前流程的控制台错误或页面错误，但不要借此扩展测试范围。
 
-不得仅凭阅读代码把测试点标记为通过。若浏览器工具、运行环境、账号或测试数据不可用，将对应测试点标记为 `阻塞`，说明缺少什么，不伪造执行结果。避免对生产环境执行写入、删除、支付、发送消息等有副作用的操作；需要这类动作时先取得用户授权或使用安全测试环境。
+不得仅凭阅读代码把测试点标记为通过。若 Playwright CLI、Chromium、运行环境、账号或测试数据不可用，将对应测试点标记为 `阻塞`，说明缺少什么，不伪造执行结果；不能因为拿到了页面源码或静态快照就把真实浏览器测试标记为通过。避免对生产环境执行写入、删除、支付、发送消息等有副作用的操作；需要这类动作时先取得用户授权或使用安全测试环境。
 
 发现明确且属于本次功能范围的问题时，若用户要求的是完成或修复功能，可修复后重新执行受影响的测试点；若用户只要求测试，则只报告问题，不修改代码。
+
+## Reddit 实战参考
+
+以下链接只作为社区经验输入，不替代项目测试框架或浏览器工具的官方文档；只吸收多次讨论中重复出现、且能通过实际证据验证的做法：
+
+- [减少 Playwright flaky 的定位器经验](https://www.reddit.com/r/Playwright/comments/1t6c1jz/i_tested_3_approaches_to_handling_flaky_selectors/)：语义定位、稳定测试契约、避免深层结构选择器。
+- [减少 flaky 的社区清单](https://www.reddit.com/r/Playwright/comments/1pbz01q/whats_your_1_trick_to_reduce_flakiness_in/)：等待应用目标状态、保持测试隔离、不要让 retry 或 `networkidle` 掩盖问题。
+- [CI 失败排查经验](https://www.reddit.com/r/Playwright/comments/1qpdry6/how_to_debug_playwright_tests_in_ci_the_complete/)：失败时集中保存截图、trace、日志，并尽量复现 CI 的浏览器和资源条件。
 
 ## 打印报告
 
@@ -44,6 +79,7 @@ description: 在一个前端功能点实现完成后，根据当前对话、验�
 
 - 功能：<本次完成的功能点>
 - 环境：<页面地址、浏览器或关键运行条件>
+- 浏览器：Playwright CLI / Chromium（headless 或 headed）
 - 结论：通过 / 部分通过 / 失败 / 阻塞
 
 | # | 测试点 | 操作 | 预期 | 实际 | 状态 |
