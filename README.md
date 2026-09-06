@@ -1,10 +1,10 @@
 # test-skill
 
-本仓库维护面向 Codex 的前端真实浏览器点击测试 skill。它用于在一个前端功能点完成后，从需求和实际改动中提炼最小验收清单，并使用 Playwright CLI 驱动 bundled Chromium 完成可视化验证，最后输出简洁的 Markdown 报告。
+本仓库维护面向 Codex 的前端真实浏览器点击测试 skill。它用于在一个前端功能点完成后，从需求和实际改动中提炼最小验收清单，并使用 Playwright CLI 驱动 bundled Chromium 完成可视化验证；测试失败时在获得修复授权且属于本次功能范围时自动定位、最小修改并循环复测，最后输出简洁的 Markdown 报告。
 
 ## 整体架构
 
-![frontend-click-test 真实浏览器验收闭环](docs/diagrams/frontend-click-test-flow.svg)
+![frontend-click-test 失败自动修复闭环](docs/diagrams/frontend-click-test-flow.svg)
 
 渲染产物：[SVG](docs/diagrams/frontend-click-test-flow.svg) / [PNG](docs/diagrams/frontend-click-test-flow.png)；图源：[frontend-click-test-flow.puml](docs/diagrams/frontend-click-test-flow.puml)。该图使用 `plantuml-skill` 通过公共 Kroki 渲染，适用于本仓库公开的 skill 架构信息。
 

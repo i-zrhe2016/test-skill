@@ -1,7 +1,7 @@
 @startuml
 !theme plain
 
-title frontend-click-test — 真实浏览器验收闭环
+title frontend-click-test — 失败自动修复闭环
 hide footbox
 
 actor "开发者 / Codex" as author
@@ -9,6 +9,8 @@ participant "验收点提炼" as criteria
 participant "测试执行编排" as orchestration
 participant "Playwright CLI" as cli
 participant "Bundled Chromium" as chromium
+participant "根因定位与\n最小修复" as repair
+participant "前端代码 / 配置" as code
 participant "结果判定与\nMarkdown 报告" as report
 
 author -> criteria : 提供需求、验收标准、实际改动
@@ -30,15 +32,27 @@ loop 每个测试点
   activate chromium
   chromium --> cli : 目标状态 / 可见结果
   deactivate chromium
-  cli --> orchestration : 操作结果与证据
+  alt 目标状态满足
+    cli --> orchestration : 通过证据
+  else 失败且已获修复授权
+    cli --> orchestration : 失败证据
+    orchestration -> repair : 收集日志、URL、截图、请求\n定位根因
+    repair -> code : 修改最小相关代码/配置
+    code --> repair : 补丁
+    repair --> orchestration : 变更说明与验证计划
+    orchestration -> orchestration : 运行定向静态/单元检查
+    orchestration -> cli : 从已知状态重新打开并复测
+  else 环境、权限或需求阻塞
+    cli --> report : 阻塞或需要决策
+  end
 end
 
 cli --> report : 实际结果、截图、URL 和日志
 deactivate cli
 report --> author : 通过 / 部分通过 / 失败 / 阻塞
 
-note over cli, chromium
-  代码阅读、静态 HTML、curl
-  不能替代真实页面动作
+note over repair, code
+  仅修改本次功能范围内的最小根因
+  重试不能替代修复，也不能放宽断言
 end note
 @enduml
