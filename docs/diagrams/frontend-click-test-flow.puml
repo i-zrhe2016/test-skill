@@ -1,0 +1,25 @@
+@startuml
+title frontend-click-test 数据流
+left to right direction
+
+actor "开发者 / Codex" as author
+rectangle "前端功能实现" as feature
+
+package "frontend-click-test" {
+  component "验收点提炼" as criteria
+  component "测试执行编排" as orchestration
+  component "Markdown 报告" as report
+}
+
+component "Playwright CLI" as cli
+component "Bundled Chromium" as chromium
+
+author --> feature : 需求与代码改动
+feature --> criteria : 功能范围
+criteria --> orchestration : 3–7 个测试点
+orchestration --> cli : open / snapshot / click...
+cli --> chromium : 真实页面操作
+chromium --> cli : 页面状态与证据
+cli --> report : 实际执行结果
+report --> author : 通过 / 失败 / 阻塞
+@enduml
