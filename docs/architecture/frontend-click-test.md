@@ -6,6 +6,8 @@
 
 它是定向验收层，不替代单元测试、组件测试、接口测试、性能测试、安全测试或全站回归测试。
 
+![frontend-click-test 真实浏览器验收闭环](../diagrams/frontend-click-test-flow.svg)
+
 ## 职责边界
 
 | 模块 | 职责 | 不负责 |

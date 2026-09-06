@@ -1,25 +1,44 @@
 @startuml
-title frontend-click-test 数据流
-left to right direction
+!theme plain
+
+title frontend-click-test — 真实浏览器验收闭环
+hide footbox
 
 actor "开发者 / Codex" as author
-rectangle "前端功能实现" as feature
+participant "验收点提炼" as criteria
+participant "测试执行编排" as orchestration
+participant "Playwright CLI" as cli
+participant "Bundled Chromium" as chromium
+participant "结果判定与\nMarkdown 报告" as report
 
-package "frontend-click-test" {
-  component "验收点提炼" as criteria
-  component "测试执行编排" as orchestration
-  component "Markdown 报告" as report
-}
+author -> criteria : 提供需求、验收标准、实际改动
+activate criteria
+criteria -> criteria : 选择 3–7 个最小测试点
+criteria --> orchestration : 测试点与前置条件
+deactivate criteria
 
-component "Playwright CLI" as cli
-component "Bundled Chromium" as chromium
+orchestration -> cli : open --browser=chromium
+activate cli
+cli -> chromium : 打开页面
+activate chromium
+chromium --> cli : 初始页面快照
+deactivate chromium
 
-author --> feature : 需求与代码改动
-feature --> criteria : 功能范围
-criteria --> orchestration : 3–7 个测试点
-orchestration --> cli : open / snapshot / click...
-cli --> chromium : 真实页面操作
-chromium --> cli : 页面状态与证据
-cli --> report : 实际执行结果
-report --> author : 通过 / 失败 / 阻塞
+loop 每个测试点
+  orchestration -> cli : snapshot / click / fill
+  cli -> chromium : 真实页面操作
+  activate chromium
+  chromium --> cli : 目标状态 / 可见结果
+  deactivate chromium
+  cli --> orchestration : 操作结果与证据
+end
+
+cli --> report : 实际结果、截图、URL 和日志
+deactivate cli
+report --> author : 通过 / 部分通过 / 失败 / 阻塞
+
+note over cli, chromium
+  代码阅读、静态 HTML、curl
+  不能替代真实页面动作
+end note
 @enduml

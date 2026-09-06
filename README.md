@@ -4,33 +4,9 @@
 
 ## 整体架构
 
-```plantuml
-@startuml
-title frontend-click-test 数据流
-left to right direction
+![frontend-click-test 真实浏览器验收闭环](docs/diagrams/frontend-click-test-flow.svg)
 
-actor "开发者 / Codex" as author
-rectangle "前端功能实现" as feature
-
-package "frontend-click-test" {
-  component "验收点提炼" as criteria
-  component "测试执行编排" as orchestration
-  component "Markdown 报告" as report
-}
-
-component "Playwright CLI" as cli
-component "Bundled Chromium" as chromium
-
-author --> feature : 需求与代码改动
-feature --> criteria : 功能范围
-criteria --> orchestration : 3–7 个测试点
-orchestration --> cli : open / snapshot / click...
-cli --> chromium : 真实页面操作
-chromium --> cli : 页面状态与证据
-cli --> report : 实际执行结果
-report --> author : 通过 / 失败 / 阻塞
-@enduml
-```
+渲染产物：[SVG](docs/diagrams/frontend-click-test-flow.svg) / [PNG](docs/diagrams/frontend-click-test-flow.png)；图源：[frontend-click-test-flow.puml](docs/diagrams/frontend-click-test-flow.puml)。该图使用 `plantuml-skill` 通过公共 Kroki 渲染，适用于本仓库公开的 skill 架构信息。
 
 数据流的核心边界是：skill 负责确定范围、编排操作和记录结果；Playwright CLI 负责浏览器控制；Chromium 负责提供真实页面行为。代码阅读、静态 HTML 或 `curl` 不能替代浏览器验证。
 
