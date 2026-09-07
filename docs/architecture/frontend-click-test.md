@@ -1,5 +1,7 @@
 # 前端点击测试架构
 
+`frontend-click-test` 是 [`test-workflow`](test-workflow.md) 的专用浏览器分支，负责真实 Chromium 中的页面操作与用户可见结果验证。非浏览器的通用测试梯度参见[通用测试工作流架构](test-workflow.md)。
+
 ## 目标
 
 `frontend-click-test` 面向已经完成实现和常规代码验证的前端功能点，确认用户能否通过真实页面完成主要操作，并观察用户可见结果。当前任务授权修复时，失败会进入根因定位、最小修改和真实浏览器复测闭环。
