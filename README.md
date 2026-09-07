@@ -1,27 +1,46 @@
 # test-skill
 
-本仓库维护面向 Codex 的前端真实浏览器点击测试 skill。它用于在一个前端功能点完成后，从需求和实际改动中提炼最小验收清单，并使用 Playwright CLI 驱动 bundled Chromium 完成可视化验证；测试失败时在获得修复授权且属于本次功能范围时自动定位、最小修改并循环复测，最后输出简洁的 Markdown 报告。
+本仓库维护面向 Codex 的通用测试工作流 Skill。
 
-## 整体架构
-
-![frontend-click-test 失败自动修复闭环](docs/diagrams/frontend-click-test-flow.svg)
-
-渲染产物：[SVG](docs/diagrams/frontend-click-test-flow.svg) / [PNG](docs/diagrams/frontend-click-test-flow.png)；图源：[frontend-click-test-flow.puml](docs/diagrams/frontend-click-test-flow.puml)。该图使用 `plantuml-skill` 通过公共 Kroki 渲染，适用于本仓库公开的 skill 架构信息。
-
-数据流的核心边界是：skill 负责确定范围、编排操作和记录结果；Playwright CLI 负责浏览器控制；Chromium 负责提供真实页面行为。代码阅读、静态 HTML 或 `curl` 不能替代浏览器验证。
+核心入口是 `test-workflow`：从需求、Ticket 功能清单和验收标准提炼最小高价值测试集，优先使用项目已有测试框架，按 `静态检查 -> focused tests -> integration/regression -> browser/E2E` 的成本梯度执行；复杂或高风险行为采用 RED -> GREEN，普通失败先直接诊断修复，重复/原因不明/高风险失败再升级到 targeted code review。
 
 ## Skill 清单
 
 | Skill | 用途 | 入口 |
 |---|---|---|
-| `frontend-click-test` | 对页面、组件和用户交互执行最小真实浏览器点击验证 | [`frontend-click-test/SKILL.md`](frontend-click-test/SKILL.md) |
+| `test-workflow` | 通用单元、组件、API、集成、回归和条件式浏览器验证 | [`test-workflow/SKILL.md`](test-workflow/SKILL.md) |
+| `frontend-click-test` | 旧的专用前端真实浏览器点击测试；保留兼容，新的工作流应优先使用 `test-workflow` | [`frontend-click-test/SKILL.md`](frontend-click-test/SKILL.md) |
 
-## 文档索引
+## 推荐执行顺序
 
-- [前端点击测试架构](docs/architecture/frontend-click-test.md)：职责边界、数据流、状态和安全约束。
-- [前端点击测试运行手册](docs/testing/frontend-click-test.md)：前置检查、执行步骤、证据留存和报告格式。
-- [PlantUML 数据流图源文件](docs/diagrams/frontend-click-test-flow.puml)：可复用的架构图源文件。
+```text
+Requirement / Ticket
+        |
+        v
+Acceptance + Test Cases
+        |
+        v
+Static / Type / Lint
+        |
+        v
+Focused automated tests
+        |
+        +-- complex/high-risk --> RED -> Implement -> GREEN
+        |
+        v
+Integration / affected regression
+        |
+        +-- browser-visible --> Browser / E2E
+        |
+        v
+Test evidence
+```
+
+原则：使用能可靠证明行为的最低成本测试层，不把浏览器 E2E 当默认反馈循环，也不为了 GREEN 放宽断言、增加盲目 retry 或固定 sleep。
 
 ## 维护约定
 
-一个功能点完成后应尽快完成一次定向点击测试闭环。Skill 文本发生变化时，同步检查运行手册和架构说明；文档中的页面地址、账号、Cookie、Token 和测试数据一律使用占位符，不写入真实值。
+- 优先复用项目已有测试框架、fixture、helper 和命令。
+- 每个 Ticket 的内循环保持 focused；多个 Ticket 完成后再运行必要的集成/回归测试。
+- 浏览器验证只用于真实用户交互或明确要求的 E2E 行为。
+- 文档中的页面地址、账号、Cookie、Token 和测试数据使用占位符，不写入真实值。
